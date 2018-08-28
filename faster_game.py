@@ -1,9 +1,16 @@
 import numpy as np
 import sys
+from operator import add
 
+"""
+Creates 2 data structures:
+1. List of all valid tic-tac-toe lines
+2. Dictionary mapping each line to the player that controls it (0 if nobody does)
+
+@return: Above data structures
+"""
 def makeLineDict():
-	lines = {}
-
+	lineControllers = {}
 	axisOrder = ()
 	for i in range(d):
 		axisOrder = axisOrder + (i,)
@@ -18,14 +25,58 @@ def makeLineDict():
 		transposedCoords = coords.transpose(axisOrder)
 		transposedCoords = transposedCoords.reshape(n**(d-1),n)
 		for j in range(len(transposedCoords)):
-			lines[tuple(transposedCoords[j])] = 0
+			lineControllers[tuple(transposedCoords[j])] = 0
 
-	return
+	#diagonals
+	cornerList = createCornerList(n, d) #Only corners with first coord = 0 to avoid double counting
+	for i in range(len(cornerList)):
+		square = cornerList[i]
+		increments = () #direction of hypercube diagonal associated with this corner
+		for j in range(d):
+			if square[j] == 0:
+				increments += (1,)
+			else:
+				increments += (-1,)
 
-def createCornerList(d):
+		diagonal = (square,)
+		for _ in range(n-1):
+			square = tuple(map(add, square, increments))
+			diagonal += (square,)
+
+		lineControllers[diagonal] = 0
+
+	return (list(lineControllers.keys()),lineControllers)
+
+"""
+Creates a mapping from each square on the board to the indices of the
+tic-tac-toe lines in global 'lines' that it lies on
+
+@return: Dictionary with n^d keys corresponding to squares and values of lists
+		 of indices in global 'lines'
+"""
+def createSquareToLineMapping():
+	linesForSquare = {}
+	for x,_ in np.ndenumerate(board):
+		lineIndices = []
+		for i in range(len(lines)):
+			if x in lines[i]:
+				lineIndices.append(i)
+		linesForSquare[x] = lineIndices
+
+	return linesForSquare
+
+"""
+For a d-dimensional hypercube of edge length n, return coordinates of corners with
+first coordinate equal to 0.
+
+@param n: hypercube edge length
+@param d: hypercube dimension
+@return: tuple of corner coordinates
+"""
+def createCornerList(n, d):
 	if d == 1:
 		return ((0,),)
-	subList = createCornerList(d-1)
+	subList = createCornerList(n, d-1)
 	list0 = tuple(map(lambda x: x+(0,),subList))
 	list1 = tuple(map(lambda x: x+(n-1,),subList))
 	return list0+list1
@@ -37,4 +88,5 @@ if __name__ == '__main__':
 	for i in range(d):
 		shape = shape + (n,)
 	board = np.zeros(shape, dtype=int)
-	makeLineDict()
+	lines,lineControllers = makeLineDict()
+	linesForSquare = createSquareToLineMapping()
